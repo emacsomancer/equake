@@ -213,6 +213,10 @@
   (expand-file-name "equake-persistent-display" user-emacs-directory)
   "A file to store memorized DISPLAY in.")
 
+(defvar equake-saved-layout-file
+  (expand-file-name "equake-saved-layout" user-emacs-directory)
+  "A file to store saved layout file in.")
+
 (defgroup equake ()
   "Equake, a drop-down console for eshell and terminal emulation."
   :group 'shell)
@@ -418,7 +422,7 @@ background colour."
 
 (defun equake-kill-emacs-advice (&rest _)
   "Ask whether a user wants to kill an Equake frame.
-
+s
 Intended as `:before-while' advice for
 `save-buffers-kill-terminal'"
   (or (not (frame-parameter nil 'equakep))
@@ -447,12 +451,12 @@ Intended as `:before-while' advice for
       (equake-ask-before-closing-equake)
     (save-buffers-kill-terminal)))
 
-(defun equake-invoke ()
+(defun equake-invoke (&optional monitor)
   "Toggle Equake frames.
 Run with \"emacsclient -n -e '(equake-invoke)'\"."
   (interactive)
   (equake--select-some-graphic-frame)
-  (let* ((monitor (equake--get-monitor))
+  (let* ((monitor (or monitor (equake--get-monitor)))
          (current-equake-frame (alist-get monitor equake--frame)))
     (if (frame-live-p current-equake-frame)
         (if (frame-visible-p current-equake-frame)
@@ -482,32 +486,41 @@ Needed to assign a new name for a new tab (e.g. its number)")
              (ido-completing-read "Choose shell:"
                                   equake-available-shells 'nil 't 'nil 'nil)))))
 
-(defun equake-new-tab (&optional override)
-  "Open a new shell tab on monitor, optionally OVERRIDE default shell."
+(defun equake-new-tab (&optional specified-shell saved-monitor saved-tab-name targbuff)
+  "Open a new shell tab on monitor, optionally override default shell with SPECIFIED-SHELL;
+ optionally used a specified SAVED-MONITOR and SAVED-TAB-NAME."
   (interactive)
-  (let ((launchshell (or override equake-default-shell)))
-    (if (not (equake--launch-shell launchshell))
+  (let ((launchshell (or specified-shell equake-default-shell)))
+    (if (not (equake--launch-shell launchshell targbuff))
         (let ((inhibit-message t))
           (message "No such shell or relevant shell not installed."))
-      (buffer-face-set 'equake-buffer-face)
-      (let* ((monitor (equake--get-monitor))
-             (new-tab (current-buffer))
-             (tab-no (1+ (alist-get monitor equake--max-tab-no -1)))
-             (tab-name (if equake-append-shell-type-to-tab-name
-                           (concat (number-to-string tab-no)
-                                   "-"
-                                   (symbol-name launchshell))
-                           (number-to-string tab-no))))
-        (setf (alist-get monitor equake--max-tab-no) tab-no)
-        (cl-callf -snoc (alist-get monitor equake--tab-list) new-tab)
-        (when rash-mode
-          (comint-send-string nil "racket -l rash/repl --\n"))
-        (puthash new-tab `((monitor . ,monitor)
-                           (tab-name . ,tab-name)
-                           (shell-type . ,launchshell))
-                 equake--tab-properties)
-        (equake--rename-tab tab-name)
-        (equake-mode))))) ; set Equake minor mode for buffer
+    (let* ((monitor (or saved-monitor (equake--get-monitor)))
+           (new-tab (or targbuff (current-buffer)))
+           (tab-no (1+ (alist-get monitor equake--max-tab-no -1)))
+           (tab-name (or saved-tab-name
+                         (if equake-append-shell-type-to-tab-name
+                             (concat (number-to-string tab-no)
+                                     "-"
+                                     (symbol-name launchshell))
+                           (number-to-string tab-no)))))
+
+      (setf (alist-get monitor equake--max-tab-no) tab-no)
+      (cl-callf -snoc (alist-get monitor equake--tab-list) new-tab)
+      (when rash-mode
+        (set-buffer new-tab)
+        (comint-send-string nil "racket -l rash/repl --\n"))
+      (puthash new-tab `((monitor . ,monitor)
+                         (tab-name . ,tab-name)
+                         (shell-type . ,launchshell))
+               equake--tab-properties)
+      (if targbuff
+          (with-current-buffer new-tab
+            (buffer-face-set 'equake-buffer-face)
+            (equake--rename-tab tab-name monitor)
+            (equake-mode))
+        (buffer-face-set 'equake-buffer-face)
+        (equake--rename-tab tab-name monitor)
+        (equake-mode))))))
 
 (defun equake-move-tab-right ()
   "Move current tab one position to the right."
@@ -566,6 +579,10 @@ Needed to assign a new name for a new tab (e.g. its number)")
         (kill-buffer (current-buffer)))
     (message "Not an Equake tab.")))
 
+(defun equake--destroy-equake-frame (monitor)
+  "Destroy an Equake frame."
+  (delete-frame (select-frame-by-name (concat "*EQUAKE*[" monitor "]"))))
+
 (defun equake--on-kill-buffer ()
   "Things to do when an Equake buffer is killed." ; TODO: prevent last equake tab from being killed?
   (when equake-mode
@@ -579,7 +596,7 @@ Needed to assign a new name for a new tab (e.g. its number)")
                  (null (cdr (assoc monitor equake--tab-list)))) ;; if no more etabs,
         (setf (alist-get monitor equake--max-tab-no) -1) ;; reset the "highest tab number" and
         ;; destroy the corresponding equake frame:
-        (delete-frame (select-frame-by-name (concat "*EQUAKE*[" (symbol-name monitor) "]")))))))
+        (equake--destroy-equake-frame (symbol-name monitor))))))
 
 (defun equake--tab-p (&optional buffer)
   "Return t if BUFFER is an Equake tab."
@@ -622,12 +639,12 @@ OFFSET might be negative."
          (next-index (mod (+ offset current-index) (length etab-list))))
     (elt etab-list next-index)))
 
-(defun equake--rename-tab (base-name)
+(defun equake--rename-tab (base-name &optional mon)
   "Rename the current buffer (presumed Equake tab) to BASE-NAME.
 The actual buffer name is changed to some unique name that
 includes BASE-NAME."
   (setf (equake--get-tab-property 'tab-name) base-name)
-  (let ((monitor (equake--get-tab-property 'monitor)))
+  (let ((monitor (or mon (equake--get-tab-property 'monitor))))
     (rename-buffer (format "*Equake[%s]*<%s>" monitor base-name) t)))
 
 ;;; Mode line
@@ -862,6 +879,18 @@ reason remains to be determined."
       (progn (x-open-connection display) (x-close-connection display) t)
     (error nil)))
 
+(defun equake--write-saved-layout-to-file (layout)
+  "Saved the current layout to a file."
+  (with-temp-file equake-saved-layout-file
+    (prin1 layout (current-buffer))))
+
+(defun equake--read-saved-layout-from-file (layout)
+  "Read in the saved layout from the `equake-saved-layed-file`."
+  (with-temp-buffer
+    (insert-file-contents layout)
+    (cl-assert (eq (point) (point-min)))
+    (read (current-buffer))))
+
 ;;; Rest
 
 (defun equake--hide-from-taskbar ()
@@ -869,8 +898,8 @@ reason remains to be determined."
   (let ((frame (alist-get (equake--get-monitor) equake--frame)))
     (when (executable-find "xprop")
       (shell-command (concat "xprop -name "
-                           (frame-parameter frame 'name)
-                           " -f _NET_WM_STATE 32a -set _NET_WM_STATE _NET_WM_STATE_SKIP_TASKBAR")))))
+                             (frame-parameter frame 'name)
+                             " -f _NET_WM_STATE 32a -set _NET_WM_STATE _NET_WM_STATE_SKIP_TASKBAR")))))
 
 (defun equake--select-some-graphic-frame ()
   "Try to select some graphic frame.
@@ -922,43 +951,99 @@ HISTORY is of format given by `window-prev-buffers'."
     (cl-loop for mon in current-layout
              do (let ((monname (cons (car mon) '())))
                   (cl-loop for buf in (cdr mon)
-                           do (progn (setf monname
-                                           (cons
-                                            (cons buf (equake--get-tab-properties buf))
-                                            monname))))
+                           do (setf monname
+                                    (cons (equake--get-tab-properties buf)
+                                          monname)))
                   (setf to-be-saved-layout (cons (nreverse monname) to-be-saved-layout))))
-    (setf equake-saved-layout (nreverse to-be-saved-layout))))
+    (equake--write-saved-layout-to-file
+     (nreverse to-be-saved-layout))))
 
-(defun equake--launch-shell (launchshell)
-  "Launch a new shell session, LAUNCHSHELL will set non-default shell."
+(defun equake-load-layout ()
+  "Load a saved Equake tab layout."
   (interactive)
-  (let ((sh-command equake-default-sh-command)
-        (success 't))
-    (when (equal sh-command "")
-      (setq sh-command shell-file-name))
-    (cond ((equal launchshell 'eshell)
-           (eshell 'N))
-          ((equal launchshell 'vterm)
-           (if (require 'vterm nil 'noerror)
-               (vterm)
-             (setq success 'nil)))
-          ((equal launchshell 'rash)
-           (if (not equake-rash-installed)
-               (setq success 'nil)
+  (let ((saved-layout
+         (equake--read-saved-layout-from-file
+          equake-saved-layout-file))
+        (current-tab-list equake--tab-list)
+        (current-property-list equake--tab-properties))
+    ;; (setf equake--tab-list '())
+    ;; (setf equake--tab-properties (make-hash-table :test #'eq :weakness 'key)
+    (cl-loop for mon in saved-layout
+             do (let ((monname (car mon)))
+                  ;; (select-frame-by-name
+                  ;;  (concat "*EQUAKE*[" (symbol-name (car monname)) "]"))
+                  ;; (equake--destroy-equake-frame (symbol-name (car monname)))
+                  ;; (equake-invoke monname)
+                  (cl-loop for buf in (cdr mon)
+                           do (let ((shell-type (cdr (assoc 'shell-type buf)))
+                                    (tab-name (cdr (assoc 'tab-name buf))))
+                                (setf newbuf (generate-new-buffer "tmp-equake-tab"))
+                                ;; (with-current-buffer newbuf
+                                (equake-new-tab shell-type monname tab-name newbuf)
+                                ;; )
+                           ))))))
+
+(defun equake--launch-shell (launchshell &optional targbuf)
+  "Launch a new shell session, LAUNCHSHELL will set non-default shell."
+  ;; (interactive)
+  (if targbuf
+      (with-current-buffer targ
+        (let ((sh-command equake-default-sh-command)
+              (success 't))
+          (when (equal sh-command "")
+            (setq sh-command shell-file-name))
+          (cond ((equal launchshell 'eshell)
+                 (eshell 'N))
+                ((equal launchshell 'vterm)
+                 (if (require 'vterm nil 'noerror)
+                     (vterm)
+                   (setq success 'nil)))
+                ((equal launchshell 'rash)
+                 (if (not equake-rash-installed)
+                     (setq success 'nil)
+                   (if (require 'vterm nil 'noerror)
+                       (vterm)
+                     (shell)
+                     (delete-other-windows))
+                   (rash-mode)))
+                ((equal launchshell 'ansi-term)
+                 (ansi-term sh-command))
+                ((equal launchshell 'term)
+                 (term sh-command))
+                ((equal launchshell 'shell)
+                 (shell)
+                 (delete-other-windows))
+                ('t (setq success 'nil)))
+          success))
+    (let ((sh-command equake-default-sh-command)
+          (success 't))
+      (when (equal sh-command "")
+        (setq sh-command shell-file-name))
+      (cond ((equal launchshell 'eshell)
+             (eshell 'N))
+            ((equal launchshell 'vterm)
              (if (require 'vterm nil 'noerror)
                  (vterm)
-               (shell)
-               (delete-other-windows))
-             (rash-mode)))
-          ((equal launchshell 'ansi-term)
-           (ansi-term sh-command))
-          ((equal launchshell 'term)
-           (term sh-command))
-          ((equal launchshell 'shell)
-           (shell)
-           (delete-other-windows))
-          ('t (setq success 'nil)))
-    success))
+               (setq success 'nil)))
+            ((equal launchshell 'rash)
+             (if (not equake-rash-installed)
+                 (setq success 'nil)
+               (if (require 'vterm nil 'noerror)
+                   (vterm)
+                 (shell)
+                 (delete-other-windows))
+               (rash-mode)))
+            ((equal launchshell 'ansi-term)
+             (ansi-term sh-command))
+            ((equal launchshell 'term)
+             (term sh-command))
+            ((equal launchshell 'shell)
+             (shell)
+             (delete-other-windows))
+            ('t (setq success 'nil)))
+      success)))
+  
+
 
 ;;; Configuration
 
