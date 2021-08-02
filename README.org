@@ -59,7 +59,7 @@ i.e. Mac) and =\'w32= (Windows).
 
 See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the Babbage Files blog post]].
 
-* Screenshots
+* <<Screenshots>>
 ** Equake running in StumpWM
 [[./image/equake-in-stumpwm.gif]]
 [[./image/equake-in-stumpwm.webm][(click for higher rez video)]]
@@ -70,7 +70,7 @@ See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the 
 ** Equake running in KDE Plasma 5
 [[./image/equake-in-kdeplasma5.gif]]
 
-* Installation
+* <<Installation>>
 Unless you're installing via Melpa, make sure you have the following
 external dependencies installed: [[https://github.com/magnars/dash.el][ =dash= ]].  This might be
 accomplished via [[https://github.com/jwiegley/use-package][ =use-package= ]], e.g.:
@@ -132,7 +132,7 @@ add something like this to your =init.el= (assuming you put it into
 (advice-add #'save-buffers-kill-terminal :before-while #'equake-kill-emacs-advice)
 #+END_SRC
 
-* Usage
+* <<Usage>>
 Run with:
 #+BEGIN_SRC shell
 emacsclient -n -e '(equake-invoke)'
@@ -288,7 +288,7 @@ The ~frame.el~ library defines methods for interacting with ~w32~ (Windows)
 and ~ns~ (NextStep/Mac), so in theory these should also work with
 ~equake~. This has not been tested though.
 
-* Keybindings & other customisation
+* <<Keybindings>> & other customisation
 | C-{     | Switch to tab on left            |
 | C-}     | Switch to tab on right           |
 | C-M-{   | Move tab one position left       |
@@ -307,8 +307,8 @@ You can also customise faces, e.g. via:
 (set-face-attribute 'vterm-color-default 'nil :inherit 'default :foreground "white") ; as does vterm
 #+end_src
 
-* Changelog
-** v0.98
+* <<Changelog>>
+** <<v0.98>>
 - The Equake frame is destroyed when the last Equake etab associated with the frame is closed, and the tab numbering reset. (Re-invoking Equake after the frame is closed thus, as usual, creates a new frame. Tab numbering starts at '0' again.)
 - Add a convenience function, =equake-restore-last-etab=, to switch to the last used Equake etab when an Equake frame is viewing a non-Equake buffer (e.g. user has opened a file in the Equake frame). I recommend adding a keybinding for this. Perhaps to =C-M-^= (see recommended config above).
 - Another new convenience function, =equake-close-tab-without-query=, closes the current Equake tab (only if the current buffer is, in fact, an Equake tab) without prompting for further confirmations about running processes and so on. It's bound to =C-M-_= by default.
