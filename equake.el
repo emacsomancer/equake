@@ -11,7 +11,7 @@
 ;;          |_|                      ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Copyright (C) 2018-2025 Benjamin Slade
+;; Copyright (C) 2018-2026 Benjamin Slade
 
 ;; Author: Benjamin Slade <slade@lambda-y.net>
 ;; Maintainer: Benjamin Slade <slade@lambda-y.net>
