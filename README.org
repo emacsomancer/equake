@@ -56,7 +56,7 @@ See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the 
 
 ** 2026 - variety of shells
 *** Vterm (with fish shell) [tailend of vttest report]
-[[./image.v0.999111-with-vterm-fish_vttest.png]]
+[[./image/v0.999111-with-vterm-fish_vttest.png]]
 *** Eat (with nushell) [nushell's fancy =ls= ]
 [[./image/v0.999111-with-eat-nushell_ls.png]]
 *** Eshell [showing up a simple eshell trick]
