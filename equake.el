@@ -13,11 +13,11 @@
 
 ;; Copyright (C) 2018-2026 Benjamin Slade
 
-;; Author: Benjamin Slade <slade@lambda-y.net>
-;; Maintainer: Benjamin Slade <slade@lambda-y.net>
+;; Author: Benjamin Slade <LfLg.gg.Lx.f.xx@lambda-y.net>
+;; Maintainer: Benjamin Slade <LfLg.gg.Lx.f.xx@lambda-y.net>
 ;; URL: https://github.com/emacsomancer/equake
-;; Package-Version: 0.991111
-;; Version: 0.991111
+;; Package-Version: 0.999111
+;; Version: 0.999111
 ;; Package-Requires: ((emacs "27.1") (dash "2.14.1"))
 ;; Created: 2018-12-12
 ;; Keywords: convenience, frames, terminals, tools, window-system
@@ -235,6 +235,9 @@
   :keymap (let ((map (make-sparse-keymap)))
             map))
 
+(defvar equake--emulation-alist `((equake-mode . ,equake-mode-map)))
+(add-to-list 'emulation-mode-map-alists 'equake--emulation-alist)
+
 (define-minor-mode equake-rash-mode
   "Minor mode for drop-down consoles for rash console."
   :lighter " rash"
@@ -356,12 +359,22 @@ open in an existing (non-Equake) frame."
   :group 'equake-binding)
 
 (defcustom equake-available-shells
-  '("eshell"
-    "vterm"
-    "rash"
-    "ansi-term"
-    "term"
-    "shell")
+  (seq-filter
+   (lambda (sh)
+     (pcase sh
+       ("ghostel" (locate-library "ghostel"))
+       ("eat"     (locate-library "eat"))
+       ("vterm"   (locate-library "vterm"))
+       ("rash"    (executable-find "racket"))
+       (_         t)))
+   '("eshell"
+     "term"
+     "ansi-term"
+     "shell"
+     "vterm"
+     "rash"
+     "eat"
+     "ghostel"))
   "List of available `shell' modes for Equake."
   :group 'equake
   :type 'sexp)
@@ -387,8 +400,9 @@ open in an existing (non-Equake) frame."
   :group 'equake)
 
 (defcustom equake-default-shell 'eshell
-  "Default shell used by Equake, choices are
-`eshell', `vterm', `rash', `ansi-term', `term', `shell'."
+  "Default shell used by Equake, potential choices are
+`eshell', `ansi-term', `term', `shell', `vterm', `rash',
+`eat', `ghostel'."
   :type  'symbol
   :group 'equake)
 
@@ -464,28 +478,38 @@ Includes font typeface and background colour."
   :group 'equake-faces)
 
 (defface equake-shell-type-eshell
-  '((t (:background "midnight blue" :foreground "spring green" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#c482ff" :inherit equake-buffer-face)))
   "Face used for indicating `eshell' shell type in the mode-line."
   :group 'equake-faces)
 
-(defface equake-shell-type-vterm
-  '((t (:background "midnight blue" :foreground "thistle2" :inherit equake-buffer-face)))
-  "Face used for indicating `vterm' shell type in the mode-line."
-  :group 'equake-faces)
-
 (defface equake-shell-type-term
-  '((t (:background "midnight blue" :foreground "gold" :inherit equake-buffer-face)))
-  "Face used for indicating `(ansi-)term' shell type in the mode-line."
-  :group 'equake-faces)
-
-(defface equake-shell-type-rash
-  '((t (:background "midnight blue" :foreground "red" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "DarkSeaGreen" :inherit equake-buffer-face)))
   "Face used for indicating `(ansi-)term' shell type in the mode-line."
   :group 'equake-faces)
 
 (defface equake-shell-type-shell
-  '((t (:background "midnight blue" :foreground "cyan" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "tan" :inherit equake-buffer-face)))
   "Face used for indicating (inferior) `shell' shell type in the mode-line."
+  :group 'equake-faces)
+
+(defface equake-shell-type-vterm
+  '((t (:background "midnight blue" :foreground "aquamarine" :inherit equake-buffer-face)))
+  "Face used for indicating `vterm' shell type in the mode-line."
+  :group 'equake-faces)
+
+(defface equake-shell-type-rash
+  '((t (:background "midnight blue" :foreground "red" :inherit equake-buffer-face)))
+  "Face used for indicating `rash' shell type in the mode-line."
+  :group 'equake-faces)
+ 
+(defface equake-shell-type-eat
+  '((t (:background "midnight blue" :foreground "orange" :inherit equake-buffer-face)))
+  "Face used for indicating `eat' shell type in the mode-line."
+  :group 'equake-faces)
+
+(defface equake-shell-type-ghostel
+  '((t (:background "midnight blue" :foreground "ghost white" :inherit equake-buffer-face)))
+  "Face used for indicating `ghostel' shell type in the mode-line."
   :group 'equake-faces)
 
 (defun equake-kill-emacs-advice (&rest _)
@@ -591,7 +615,8 @@ Needed to assign a new name for a new tab (e.g. its number)")
                            (tab-name . ,tab-name))
                  equake--tab-properties)
         (equake--rename-tab tab-name)
-        (equake-mode) ; set Equake minor mode for buffer
+        (equake-mode 1) ; set Equake minor mode for buffer
+        (equake--update-mode-line monitor)
         (equake--record-frame-history))))) ; make sure to record new tab
 
 (defun equake-move-tab-right ()
@@ -734,22 +759,28 @@ includes BASE-NAME."
   "Style the shell-type indicator as per MODE."
   (pcase mode
     ((guard equake-rash-mode)
-     (propertize "((rash))" 'font-lock-face 'equake-shell-type-rash))
+     (propertize "((rash))" 'face 'equake-shell-type-rash))
     ('vterm-mode
-     (propertize "((vterm))" 'font-lock-face 'equake-shell-type-vterm))
+     (propertize "((vterm))" 'face 'equake-shell-type-vterm))
     ('eshell-mode
-     (propertize "((eshell))" 'font-lock-face 'equake-shell-type-eshell))
+     (propertize "((eshell))" 'face 'equake-shell-type-eshell))
     ('term-mode
-     (propertize "((term))" 'font-lock-face 'equake-shell-type-term))
+     (propertize "((term))" 'face 'equake-shell-type-term))
     ('shell-mode
-     (propertize "((shell))" 'font-lock-face 'equake-shell-type-shell))))
+     (propertize "((shell))" 'face 'equake-shell-type-shell))
+    ('ghostel-mode
+     (propertize "((ghostel))" 'face 'equake-shell-type-ghostel))
+    ('eat-mode
+     (propertize "((eat))" 'face 'equake-shell-type-eat))))
 
 (defun equake--format-tab (tab)
   "Format an Equake TAB for the mode line."
   (-let* ((tab-name (equake--get-tab-property 'tab-name tab))
           (tab-active-p (eq tab (current-buffer)))
           (face (if tab-active-p 'equake-tab-active 'equake-tab-inactive)))
-    (propertize (concat "[ " tab-name " ]") 'font-lock-face face)))
+    ;; (propertize (concat "[ " tab-name " ]") 'font-lock-face face)
+    (propertize (concat "[ " tab-name " ]") 'face face) ; for ghostel
+    ))
 
 ;;; Frames
 
@@ -771,7 +802,7 @@ includes BASE-NAME."
 If there is no name (e.g. in a terminal), return nil.
 
 See `equake--get-monitor-attribute'."
-  (when-let ((name (equake--get-monitor-attribute 'name frame)))
+  (when-let* ((name (equake--get-monitor-attribute 'name frame)))
     (intern name)))
 
 (defun equake--get-monitor-attribute (attr &optional frame)
@@ -843,9 +874,9 @@ For GNOME Shell under Wayland, used with an emacsclient call."
   (->> (alist-get monitor equake--win-history)
        (equake--filter-history)
        (set-window-prev-buffers nil))
-  (when-let ((last-tab (alist-get monitor equake--last-tab)))
+  (when-let* ((last-tab (alist-get monitor equake--last-tab)))
     (switch-to-buffer last-tab))
-  (when-let ((last-buffer (alist-get monitor equake--last-buffer)))
+  (when-let* ((last-buffer (alist-get monitor equake--last-buffer)))
     (switch-to-buffer last-buffer))
   (unless (equake--tab-p) ; make sure to restore to an Equake buffer
     (bury-buffer))
@@ -861,7 +892,7 @@ For GNOME Shell under Wayland, used with an emacsclient call."
 
 If the display is not graphic make a frame on some monitor using
 its workarea."
-  (if-let ((monitor (equake--get-monitor))
+  (if-let* ((monitor (equake--get-monitor))
            (workarea (equake--get-monitor-attribute 'workarea)))
       (make-frame (equake--make-frame-parameters monitor workarea))
     (equake--make-new-frame-when-no-monitor)))
@@ -929,7 +960,7 @@ that fails as well, we signal an error."
   (let ((candidates `(,(getenv "DISPLAY")
                       ,(equake--read-display-from-disk)
                       ,@equake-display-guess-list)))
-    (if-let ((display (-first #'equake--display-exists-p candidates)))
+    (if-let* ((display (-first #'equake--display-exists-p candidates)))
         display
       (error "Equake: can't access a working DISPLAY, please, open a graphical frame first"))))
 
@@ -959,7 +990,7 @@ This approach does not eliminate the problem completely, since
 there is still a corner case when a user tries to invoke Equake
 on a new display before any other graphical frames have been
 launched."
-  (if-let ((display (frame-parameter frame 'display)))
+  (if-let* ((display (frame-parameter frame 'display)))
       (write-region display nil equake-persistent-display-file)))
 
 (defun equake--display-exists-p (display)
@@ -1039,7 +1070,7 @@ of a selected frame.  If the frame is non-graphical, they work in
 unexpected ways.  This function is designed to be called right
 before invoking an Equake frame, which is going to change
 selection anyway.  Thus, selection change is of no concern."
-  (if-let ((graphic-frame (-first #'display-graphic-p (frame-list))))
+  (if-let* ((graphic-frame (-first #'display-graphic-p (frame-list))))
       (select-frame graphic-frame t)))
 
 (defun equake--shift-item (list item shift)
@@ -1068,7 +1099,7 @@ HISTORY is of format given by `window-prev-buffers'."
   "Things to do when in Equake when the current buffer is changed."
   (when (frame-parameter nil 'equakep)  ; if Equake frame
     (equake--record-frame-history))
-  (when-let ((monitor (equake--get-tab-property 'monitor))) ; if Equake tab
+  (when-let* ((monitor (equake--get-tab-property 'monitor))) ; if Equake tab
     (equake--update-mode-line monitor)
     (modify-frame-parameters nil '((vertical-scroll-bars . nil)
                                    (horizontal-scroll-bars . nil)))))
@@ -1088,13 +1119,22 @@ HISTORY is of format given by `window-prev-buffers'."
              (setq success nil)))
           ((equal launchshell 'rash)
            (if (not equake-rash-installed)
-
                (setq success nil)
                (if (require 'vterm nil 'noerror)
                    (vterm)
                  (shell)
                  (delete-other-windows))
-             (equake-rash-mode)))
+               (equake-rash-mode)))
+          ((equal launchshell 'ghostel)
+           (if (require 'ghostel nil 'noerror)
+               (ghostel t)
+             (setq success nil)))
+          ((equal launchshell 'eat)
+           (if (require 'eat nil 'noerror)
+               (let ((buf (eat nil '(4))))
+                 (switch-to-buffer buf)
+                 (set-buffer buf))
+             (setq success nil)))
           ((equal launchshell 'ansi-term)
            (ansi-term sh-command))
           ((equal launchshell 'term)
@@ -1107,12 +1147,54 @@ HISTORY is of format given by `window-prev-buffers'."
           (t (setq success nil)))
     success))
 
-;;; Configuration
+;;; Orchestration
+;; Prevent Eat/Ghostel semi-char-mode from swallowing Equake tab keybindings.
 
+(declare-function eat-update-semi-char-mode-map "ext:eat")
+(defvar eat-semi-char-non-bound-keys)
+
+;; (defun equake--sync-eat-keys ()
+;;   "Tell `eat' not to intercept keys bound in `equake-mode-map'."
+;;   (when (boundp 'eat-semi-char-non-bound-keys)
+;;     (map-keymap
+;;      (lambda (event _def)
+;;        (cl-pushnew (vector event) eat-semi-char-non-bound-keys :test #'equal))
+;;      equake-mode-map)
+;;     (when (fboundp 'eat-update-semi-char-mode-map)
+;;       (eat-update-semi-char-mode-map))))
+
+;; (with-eval-after-load 'eat
+;;   (equake--sync-eat-keys))
+
+
+;; (with-eval-after-load 'eat
+;;   (dolist (key (list equake-new-tab-binding
+;;                      equake-new-tab-different-shell-binding
+;;                      equake-prev-tab-binding
+;;                      equake-next-tab-binding
+;;                      equake-move-tab-left-binding
+;;                      equake-move-tab-right-binding
+;;                      equake-rename-etab-binding
+;;                      equake-close-tab-binding))
+;;     (define-key eat-semi-char-mode-map (kbd key) nil)))
+
+;; (with-eval-after-load 'ghostel
+;;   (dolist (key (list equake-new-tab-binding
+;;                      equake-new-tab-different-shell-binding
+;;                      equake-prev-tab-binding
+;;                      equake-next-tab-binding
+;;                      equake-move-tab-left-binding
+;;                      equake-move-tab-right-binding
+;;                      equake-rename-etab-binding
+;;                      equake-close-tab-binding))
+;;     (define-key ghostel-semi-char-mode-map (kbd key) nil)))
+
+;; Various co-ordination hooks.
 (add-hook 'equake-mode-hook #'equake-inhibit-message-locally)
 (add-hook 'buffer-list-update-hook #'equake--on-buffer-list-update)
 (add-hook 'kill-buffer-hook #'equake--on-kill-buffer)
 (add-hook 'after-make-frame-functions #'equake--update-persistent-display-file)
+
 
 (provide 'equake)
 
