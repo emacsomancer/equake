@@ -54,6 +54,17 @@ See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the 
 ** Equake running in KDE Plasma 5
 [[./image/equake-in-kdeplasma5.gif]]
 
+** 2026 - variety of shells
+*** Vterm (with fish shell) [tailend of vttest report]
+[[./image.v0.999111-with-vterm-fish_vttest.png]]
+*** Eat (with nushell) [nushell's fancy =ls= ]
+[[./image/v0.999111-with-eat-nushell_ls.png]]
+*** Eshell [showing up a simple eshell trick]
+[[./image/v0.999111-with-eshell_hullo_wurld-tricks.png]]
+*** Shell (with bash)
+[[./image/v0.999111-with-shell_comint-bash.png]]
+*** Ghostel (with fish shell) [showing off libghostty's/ghostel kitty graphics support to display an old screenshot of equake in-terminal]
+[[./image/v0.999111-with-ghostel-fish_showing_off_recursive-ish_kitty_graphics_caps.png]]
 * Installation
 Unless you're installing via Melpa, make sure you have the following
 external dependencies installed: [[https://github.com/magnars/dash.el][ =dash= ]].  This might be
