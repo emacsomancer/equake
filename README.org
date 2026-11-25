@@ -9,13 +9,11 @@
 
 I wanted to have a Lisp shell and a Lisp console interface to that shell. Of course, =eshell= is already 99% of this, but having a tabbed drop-down console feels useful to me, though it may just be what I'm used to.
 
-Thus the motivation for its creation was to easily swap =eshell= into a workflow habituated to drop-down terminal emulators, but it can be used also with =shell=, =ansi-term=, =term=, [[https://github.com/akermu/emacs-libvterm][vterm]] or [[http://rash-lang.org/][rash]]. And different tabs can be opened using different shells (i.e. you could have one tab running =eshell=, one running =ansi-term=, and so on and so forth).
+Thus the motivation for its creation was to easily swap =eshell= into a workflow habituated to drop-down terminal emulators, but it can be used also with =shell=, =ansi-term=, =term=, [[http://rash-lang.org/][rash]],  [[https://github.com/akermu/emacs-libvterm][vterm]], [[https://codeberg.org/akib/emacs-eat][eat]], and [[https://github.com/dakra/ghostel][ghostel]]. And different tabs can be opened using different shells (i.e. you could have one tab running =eshell=, one running =ansi-term=, and so on and so forth).
 
-=vterm= is not currently included in Emacs by default, but I would highly recommend using it in place of any/all of =ansi-term=, =term=, =shell=, as it effectively subsumes and supersedes the uses of these. (In my personal config I only have =eshell=, =vterm=, and =rash= enabled.)
+=eshell= obviously has its own set of features/advantages (see e.g., [[https://www.howardism.org/Technical/Emacs/eshell-why.html]["Why Use Eshell"]] ) and additionally so when used with =eat=, but for other possible terminals at this point I would most highly recommend =ghostel=: it's far fastest than any other terminal/shell on Emacs, and the Emacs integration and tooling around it is excellent.
 
-=rash= is a shell implemented in Racket, and requires Racket to be
-installed and then the installation of =rash= itself (e.g. via =raco pkg
-install rash=).
+# =vterm= is not currently included in Emacs by default, but I would highly recommend using it in place of any/all of =ansi-term=, =term=, =shell=, as it effectively subsumes and supersedes the uses of these. (In my personal config I only have =eshell=, =vterm=, and =rash= enabled.)
 
 In order to have a better =eshell= experience, I would recommend using some additional =eshell=-related initialisation. Here is what I'm using: [[https://gitlab.com/emacsomancer/init-eshell.el][https://gitlab.com/emacsomancer/init-eshell.el]]. You could clone this somewhere in your =load-path= and then add to your main Emacs initialisation file:
 
@@ -38,6 +36,10 @@ I've also been using the [[https://www.masteringemacs.org/article/complete-guide
 Equake also uses built-in Emacs functionality to probe for screen sizes via the =frame.el= library, which potential means it should work cross-platform, as =frame.el= defines frame-types =\'ns= (Next Step, i.e. Mac) and =\'w32= (Windows).
 
 Additionally functionality on Linux/Unix when =xprop= and =wmctrl= are installed. (Skipping taskbar on X for =xprop= and "Always on Top" in GNOME Shell Wayland for =wmctrl=.)
+
+Note: =rash= is a shell implemented in Racket, and requires Racket to be
+installed and then the installation of =rash= itself (e.g. via =raco pkg
+install rash=).
 
 See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the Babbage Files blog post]].
 
@@ -373,6 +375,8 @@ You can also customise faces, e.g. via:
 #+end_src
 
 * Changelog
+** v0.999111
+Enables use of =ghostel= and =eat=.
 ** v0.9911
 Added =equake-invoke.sh= shell script; this eases Equake functionality in multi-workspace/group/tab environments by "pulling" an open Equake frame into the current workspace rather than (invisibly) minimising it on the non-active workspace. Copy =equake-invoke.sh= somewhere in your =$PATH= and bind the equake shortcut to run it.
 ** v0.991
