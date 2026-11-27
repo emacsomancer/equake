@@ -37,11 +37,9 @@ Equake also uses built-in Emacs functionality to probe for screen sizes via the 
 
 Additionally functionality on Linux/Unix when =xprop= and =wmctrl= are installed. (Skipping taskbar on X for =xprop= and "Always on Top" in GNOME Shell Wayland for =wmctrl=.)
 
-Note: =rash= is a shell implemented in Racket, and requires Racket to be
-installed and then the installation of =rash= itself (e.g. via =raco pkg
-install rash=).
+Note: =rash= is a shell implemented in Racket, and requires Racket to be installed and then the installation of =rash= itself (e.g. via =raco pkg install rash=).
 
-See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the Babbage Files blog post]].
+See further discussion about the creation of Equake at [[https://babbagefiles.xyz/equake-elisp-console/][the Babbage Files blog post]].
 
 * Screenshots
 ** Equake running in StumpWM
@@ -66,9 +64,7 @@ See further discussion at [[https://babbagefiles.xyz/equake-elisp-console/][the 
 *** Ghostel (with fish shell) [showing off libghostty's/ghostel kitty graphics support to display an old screenshot of equake in-terminal]
 [[./image/v0.999111-with-ghostel-fish_showing_off_recursive-ish_kitty_graphics_caps.png]]
 * Installation
-Unless you're installing via Melpa, make sure you have the following
-external dependencies installed: [[https://github.com/magnars/dash.el][ =dash= ]].  This might be
-accomplished via [[https://github.com/jwiegley/use-package][ =use-package= ]], e.g.:
+Unless you're installing via Melpa, make sure you have the following external dependencies installed: [[https://github.com/magnars/dash.el][ =dash= ]].  This might be accomplished via [[https://github.com/jwiegley/use-package][ =use-package= ]], e.g.:
  #+begin_src elisp
 (use-package dash
  :ensure t)

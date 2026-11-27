@@ -18,7 +18,7 @@
 ;; URL: https://github.com/emacsomancer/equake
 ;; Package-Version: 0.999111
 ;; Version: 0.999111
-;; Package-Requires: ((emacs "27.1") (dash "2.14.1"))
+;; Package-Requires: ((emacs "27.1"))
 ;; Created: 2018-12-12
 ;; Keywords: convenience, frames, terminals, tools, window-system
 
@@ -223,7 +223,7 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl-lib))
-(require 'dash)                         ; for -let*
+;; (require 'dash)                         ; for -let*
 (require 'gv)
 (require 'rx)                           ; for sane regexps
 (require 'subr-x)
@@ -622,7 +622,7 @@ Needed to assign a new name for a new tab (e.g. its number)")
 (defun equake-move-tab-right ()
   "Move current tab one position to the right."
   (interactive)
-  (-let* ((monitor (equake--get-tab-property 'monitor))
+  (let* ((monitor (equake--get-tab-property 'monitor))
           (etab-list (alist-get monitor equake--tab-list)))
     (equake--shift-item etab-list (current-buffer) +1)
     (equake--update-mode-line monitor)))
@@ -630,7 +630,7 @@ Needed to assign a new name for a new tab (e.g. its number)")
 (defun equake-move-tab-left ()
   "Move current tab one position to the left."
   (interactive)
-  (-let* ((monitor (equake--get-tab-property 'monitor))
+  (let* ((monitor (equake--get-tab-property 'monitor))
           (etab-list (alist-get monitor equake--tab-list)))
     (equake--shift-item etab-list (current-buffer) -1)
     (equake--update-mode-line monitor)))
@@ -638,7 +638,7 @@ Needed to assign a new name for a new tab (e.g. its number)")
 (defun equake-next-tab ()
   "Switch to the next tab."
   (interactive)
-  (-let* ((monitor (equake--get-tab-property 'monitor))
+  (let* ((monitor (equake--get-tab-property 'monitor))
           (next-tab (equake--find-next-tab monitor (current-buffer)))
           (equake-open-non-terminal-in-new-frame nil))
     (if (eq next-tab (current-buffer))
@@ -648,7 +648,7 @@ Needed to assign a new name for a new tab (e.g. its number)")
 (defun equake-prev-tab ()
   "Switch to the previous tab."
   (interactive)
-  (-let* ((monitor (equake--get-tab-property 'monitor))
+  (let* ((monitor (equake--get-tab-property 'monitor))
           (prev-tab (equake--find-next-tab monitor (current-buffer) -1))
           (equake-open-non-terminal-in-new-frame nil))
     (if (eq prev-tab (current-buffer))
@@ -775,9 +775,9 @@ includes BASE-NAME."
 
 (defun equake--format-tab (tab)
   "Format an Equake TAB for the mode line."
-  (-let* ((tab-name (equake--get-tab-property 'tab-name tab))
-          (tab-active-p (eq tab (current-buffer)))
-          (face (if tab-active-p 'equake-tab-active 'equake-tab-inactive)))
+  (let* ((tab-name (equake--get-tab-property 'tab-name tab))
+         (tab-active-p (eq tab (current-buffer)))
+         (face (if tab-active-p 'equake-tab-active 'equake-tab-inactive)))
     ;; (propertize (concat "[ " tab-name " ]") 'font-lock-face face)
     (propertize (concat "[ " tab-name " ]") 'face face) ; for ghostel
     ))
@@ -812,7 +812,9 @@ If FRAME is omitted or nil, get an attribute of the monitor under
 the mouse cursor."
   (if frame
       (frame-monitor-attribute attr frame)
-    (-let (((x . y) (mouse-absolute-pixel-position)))
+    (let* ((pos (mouse-absolute-pixel-position))
+           (x (car pos))
+           (y (cdr pos)))
       (frame-monitor-attribute attr nil x y))))
 
 (defun equake--record-frame-history ()
@@ -918,11 +920,14 @@ fact."
 Given that this frame is going to end up on a monitor MONITOR
 with workarea TARGET-WORKAREA, make an alist of parameters
 suitable for `make-frame' or `modify-frame-parameters'"
-  (-let* (((mon-xpos mon-ypos mon-width mon-height) target-workarea)
-          (x-offset (/ (- mon-width (* mon-width equake-size-width)) 2))
-          (frame-xpos (floor (+ mon-xpos x-offset)))
-          (frame-width (truncate (* mon-width equake-size-width)))
-          (frame-height (truncate (* mon-height equake-size-height))))
+  (let* ((mon-xpos (nth 0 target-workarea))
+         (mon-ypos (nth 1 target-workarea))
+         (mon-width (nth 2 target-workarea))
+         (mon-height (nth 3 target-workarea))
+         (x-offset (/ (- mon-width (* mon-width equake-size-width)) 2))
+         (frame-xpos (floor (+ mon-xpos x-offset)))
+         (frame-width (truncate (* mon-width equake-size-width)))
+         (frame-height (truncate (* mon-height equake-size-height))))
     (list (cons 'name (format "*EQUAKE*[%s]" monitor))
           (cons 'alpha `(,equake-opacity-active ,equake-opacity-inactive))
 
