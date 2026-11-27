@@ -757,7 +757,7 @@ includes BASE-NAME."
 
 (defun equake--style-shell-type (mode)
   "Style the shell-type indicator as per MODE."
-  (pcase mode
+  (pcase mode ; changed from 'font-lock-face to 'face (for ghostel etc.)
     ((guard equake-rash-mode)
      (propertize "((rash))" 'face 'equake-shell-type-rash))
     ('vterm-mode
@@ -1154,45 +1154,8 @@ HISTORY is of format given by `window-prev-buffers'."
 
 ;;; Orchestration
 ;; Prevent Eat/Ghostel semi-char-mode from swallowing Equake tab keybindings.
-
 (declare-function eat-update-semi-char-mode-map "ext:eat")
 (defvar eat-semi-char-non-bound-keys)
-
-;; (defun equake--sync-eat-keys ()
-;;   "Tell `eat' not to intercept keys bound in `equake-mode-map'."
-;;   (when (boundp 'eat-semi-char-non-bound-keys)
-;;     (map-keymap
-;;      (lambda (event _def)
-;;        (cl-pushnew (vector event) eat-semi-char-non-bound-keys :test #'equal))
-;;      equake-mode-map)
-;;     (when (fboundp 'eat-update-semi-char-mode-map)
-;;       (eat-update-semi-char-mode-map))))
-
-;; (with-eval-after-load 'eat
-;;   (equake--sync-eat-keys))
-
-
-;; (with-eval-after-load 'eat
-;;   (dolist (key (list equake-new-tab-binding
-;;                      equake-new-tab-different-shell-binding
-;;                      equake-prev-tab-binding
-;;                      equake-next-tab-binding
-;;                      equake-move-tab-left-binding
-;;                      equake-move-tab-right-binding
-;;                      equake-rename-etab-binding
-;;                      equake-close-tab-binding))
-;;     (define-key eat-semi-char-mode-map (kbd key) nil)))
-
-;; (with-eval-after-load 'ghostel
-;;   (dolist (key (list equake-new-tab-binding
-;;                      equake-new-tab-different-shell-binding
-;;                      equake-prev-tab-binding
-;;                      equake-next-tab-binding
-;;                      equake-move-tab-left-binding
-;;                      equake-move-tab-right-binding
-;;                      equake-rename-etab-binding
-;;                      equake-close-tab-binding))
-;;     (define-key ghostel-semi-char-mode-map (kbd key) nil)))
 
 ;; Various co-ordination hooks.
 (add-hook 'equake-mode-hook #'equake-inhibit-message-locally)
