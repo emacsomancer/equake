@@ -16,8 +16,8 @@
 ;; Author: Benjamin Slade <LfLg.gg.Lx.f.xx@lambda-y.net>
 ;; Maintainer: Benjamin Slade <LfLg.gg.Lx.f.xx@lambda-y.net>
 ;; URL: https://github.com/emacsomancer/equake
-;; Package-Version: 0.999111
-;; Version: 0.999111
+;; Package-Version: 0.9999111
+;; Version: 0.9999111
 ;; Package-Requires: ((emacs "27.1"))
 ;; Created: 2018-12-12
 ;; Keywords: convenience, frames, terminals, tools, window-system
@@ -248,6 +248,9 @@
       (and (executable-find "raco")
            (not (equal " [none]" (shell-command-to-string "printf \"$(raco pkg show rash | tail -1)\"")))))
 
+(setq equake-nshell-installed (executable-find "nshell"))
+(setq equake-hilbish-installed (executable-find "hilbish"))
+
 (defvar equake-persistent-display-file
   (expand-file-name "equake-persistent-display" user-emacs-directory)
   "A file to store memorized DISPLAY in.")
@@ -358,26 +361,58 @@ open in an existing (non-Equake) frame."
          (define-key equake-mode-map (kbd equake-close-tab-binding) 'equake-close-tab-without-query))
   :group 'equake-binding)
 
+(defcustom equake-external-shells
+  '((rash
+     :program "racket"
+     :args ("-l" "rash/repl" "--")
+     :mode equake-rash-mode)
+    (nshell
+     :program "nshell"
+     :args nil)
+    (hilbish
+     :program "hilbish"
+     :args nil))
+  "External shell definitions for Equake.
+
+Each entry has the form:
+
+  (NAME :program PROGRAM :args ARGS [:mode MODE])
+
+NAME is the shell identifier.
+PROGRAM is the executable name.
+ARGS is its argument list.
+MODE, when present, is the Emacs mode to activate."
+  :type '(alist
+          :key-type symbol
+          :value-type (plist
+                       :options
+                       ((:program (string :tag "Program"))
+                        (:args (repeat string))
+                        (:mode (choice
+                                (const :tag "None" nil)
+                                function)))))
+  :group 'equake)
+
 (defcustom equake-available-shells
-  (seq-filter
-   (lambda (sh)
-     (pcase sh
-       ("ghostel" (locate-library "ghostel"))
-       ("eat"     (locate-library "eat"))
-       ("vterm"   (locate-library "vterm"))
-       ("rash"    (executable-find "racket"))
-       (_         t)))
-   '("eshell"
-     "term"
-     "ansi-term"
-     "shell"
-     "vterm"
-     "rash"
-     "eat"
-     "ghostel"))
-  "List of available `shell' modes for Equake."
+  (append
+   '("eshell" "term" "ansi-term" "shell")
+   (when (locate-library "vterm") '("vterm"))
+   (when (locate-library "eat") '("eat"))
+   (when (locate-library "ghostel") '("ghostel"))
+   (mapcar (lambda (definition)
+             (symbol-name (car definition)))
+           (seq-filter
+            (lambda (definition)
+              (let ((program (plist-get (cdr definition) :program)))
+                (and program (executable-find program))))
+            equake-external-shells)))
+  "List of available shell choices for Equake.
+
+Built-in shells are always available. Terminal backends are
+included when their libraries can be located. External shells
+are included when their configured executables are available."
   :group 'equake
-  :type 'sexp)
+  :type '(repeat string))
 
 (defcustom equake-size-width 1.0
   "Fraction (.01-1.0) for width of Equake console."
@@ -478,37 +513,56 @@ Includes font typeface and background colour."
   :group 'equake-faces)
 
 (defface equake-shell-type-eshell
-  '((t (:background "midnight blue" :foreground "#c482ff" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#B68DFC"
+         :inherit equake-buffer-face)))
   "Face used for indicating `eshell' shell type in the mode-line."
   :group 'equake-faces)
 
 (defface equake-shell-type-term
-  '((t (:background "midnight blue" :foreground "DarkSeaGreen" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#FFCC00"
+         :inherit equake-buffer-face)))
   "Face used for indicating `(ansi-)term' shell type in the mode-line."
   :group 'equake-faces)
 
 (defface equake-shell-type-shell
-  '((t (:background "midnight blue" :foreground "tan" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#39FF14"
+         :inherit equake-buffer-face)))
   "Face used for indicating (inferior) `shell' shell type in the mode-line."
   :group 'equake-faces)
 
 (defface equake-shell-type-vterm
-  '((t (:background "midnight blue" :foreground "aquamarine" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#B8FCFF"
+         :inherit equake-buffer-face)))
   "Face used for indicating `vterm' shell type in the mode-line."
   :group 'equake-faces)
 
+(defface equake-shell-type-nshell
+  '((t (:background "midnight blue" :foreground "#FF3B3B"
+         :inherit equake-buffer-face)))
+  "Face used for indicating `nshell' shell type in the mode-line."
+  :group 'equake-faces)
+
+(defface equake-shell-type-hilbish
+  '((t (:background "midnight blue" :foreground "#FF70A6"
+         :inherit equake-buffer-face)))
+  "Face used for indicating `hilbish' shell type in the mode-line."
+  :group 'equake-faces)
+
 (defface equake-shell-type-rash
-  '((t (:background "midnight blue" :foreground "red" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#D946EF"
+         :inherit equake-buffer-face)))
   "Face used for indicating `rash' shell type in the mode-line."
   :group 'equake-faces)
- 
+
 (defface equake-shell-type-eat
-  '((t (:background "midnight blue" :foreground "orange" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "#FF8000"
+         :inherit equake-buffer-face)))
   "Face used for indicating `eat' shell type in the mode-line."
   :group 'equake-faces)
 
 (defface equake-shell-type-ghostel
-  '((t (:background "midnight blue" :foreground "ghost white" :inherit equake-buffer-face)))
+  '((t (:background "midnight blue" :foreground "ghost white"
+         :inherit equake-buffer-face)))
   "Face used for indicating `ghostel' shell type in the mode-line."
   :group 'equake-faces)
 
@@ -609,10 +663,11 @@ Needed to assign a new name for a new tab (e.g. its number)")
              (tab-name (number-to-string tab-no)))
         (setf (alist-get monitor equake--max-tab-no) tab-no)
         (cl-callf -snoc (alist-get monitor equake--tab-list) new-tab)
-        (when equake-rash-mode
-          (comint-send-string nil "racket -l rash/repl --\n"))
-        (puthash new-tab `((monitor . ,monitor)
-                           (tab-name . ,tab-name))
+        (puthash new-tab
+                 `((monitor . ,monitor)
+                   (tab-name . ,tab-name)
+                   ,@(when (memq launchshell '(rash nshell hilbish))
+                       `((shell-type . ,launchshell))))
                  equake--tab-properties)
         (equake--rename-tab tab-name)
         (equake-mode 1) ; set Equake minor mode for buffer
@@ -743,23 +798,31 @@ includes BASE-NAME."
     (rename-buffer (format "*Equake[%s]*<%s>" monitor base-name) t)))
 
 ;;; Mode line
-
 (defun equake--update-mode-line (monitor)
   "Update the Equake mode line on MONITOR."
   (let* ((etab-list (alist-get monitor equake--tab-list))
          (tabs-part (mapconcat #'equake--format-tab etab-list "  "))
          (initial-part (if equake-show-monitor-in-mode-line
                            (format "%s:" monitor) ""))
-         (final-part (equake--style-shell-type major-mode))
+         (shell-type (or (equake--get-tab-property 'shell-type)
+                         major-mode))
+         (final-part
+          (equake--style-shell-type
+           (or (equake--get-tab-property 'shell-type)
+               major-mode)))
          (format (string-join `(,initial-part ,tabs-part ,final-part) " ")))
     (setq mode-line-format format)
     (force-mode-line-update)))
 
-(defun equake--style-shell-type (mode)
-  "Style the shell-type indicator as per MODE."
-  (pcase mode ; changed from 'font-lock-face to 'face (for ghostel etc.)
-    ((guard equake-rash-mode)
+(defun equake--style-shell-type-svg (shell)
+  "Style the shell-type indicator as per SHELL."
+  (pcase shell
+    ((or 'rash 'equake-rash-mode)
      (propertize "((rash))" 'face 'equake-shell-type-rash))
+    ((or 'nshell 'nshell-mode)
+     (propertize "((nshell))" 'face 'equake-shell-type-nshell))
+    ((or 'hilbish 'hilbish-mode)
+     (propertize "((hilbish))" 'face 'equake-shell-type-hilbish))
     ('vterm-mode
      (propertize "((vterm))" 'face 'equake-shell-type-vterm))
     ('eshell-mode
@@ -778,9 +841,8 @@ includes BASE-NAME."
   (let* ((tab-name (equake--get-tab-property 'tab-name tab))
          (tab-active-p (eq tab (current-buffer)))
          (face (if tab-active-p 'equake-tab-active 'equake-tab-inactive)))
-    ;; (propertize (concat "[ " tab-name " ]") 'font-lock-face face)
-    (propertize (concat "[ " tab-name " ]") 'face face) ; for ghostel
-    ))
+    (propertize (concat "[ " tab-name " ]") 'face face))) ; for ghostel
+
 
 ;;; Frames
 
@@ -1109,47 +1171,129 @@ HISTORY is of format given by `window-prev-buffers'."
     (modify-frame-parameters nil '((vertical-scroll-bars . nil)
                                    (horizontal-scroll-bars . nil)))))
 
+
+;;; Shell launching
+
+(defconst equake-shell-terminal-backends
+  '(ghostel vterm eat shell)
+  "Terminal backends, in order of preference.")
+
+(defun equake--shell-backend-available-p (backend)
+  "Return non-nil if BACKEND is available."
+  (pcase backend
+    ('ghostel (require 'ghostel nil t))
+    ('vterm   (require 'vterm nil t))
+    ('eat     (require 'eat nil t))
+    ('shell   t)))
+
+(defun equake--launch-shell-terminal (backend program args)
+  "Launch PROGRAM with ARGS using BACKEND.
+Return the resulting buffer, or nil if BACKEND is unavailable."
+  (when (equake--shell-backend-available-p backend)
+    (pcase backend
+      ('ghostel
+       (let ((ghostel-shell (cons program args)))
+         (ghostel t)))
+
+      ('vterm
+       (let ((vterm-shell program)
+             (vterm-shell-args args))
+         (vterm)
+         (current-buffer)))
+
+      ('eat
+       (let ((buffer (generate-new-buffer
+                      (format "*equake-%s*" (file-name-nondirectory program)))))
+         (with-current-buffer buffer
+           (eat-mode)
+           (eat-exec buffer (buffer-name buffer) program nil args))
+         (switch-to-buffer buffer)
+         buffer))
+
+      ('shell
+       (let ((explicit-shell-file-name program)
+             (explicit-shell-args args))
+         (shell)
+         (delete-other-windows)
+         (current-buffer))))))
+
+(defun equake--launch-shell-with-fallback (program args)
+  "Launch PROGRAM with ARGS using the first available terminal backend."
+  (catch 'launched
+    (dolist (backend equake-shell-terminal-backends)
+      (condition-case err
+          (let ((buffer (equake--launch-shell-terminal
+                         backend program args)))
+            (when (buffer-live-p buffer)
+              (throw 'launched buffer)))
+        (error
+         (message "Equake: %s failed: %s"
+                  backend (error-message-string err)))))
+    nil))
+
+(defcustom equake-shell-terminal-backends
+  '(ghostel vterm eat shell)
+  "Terminal backends, in order of preference."
+  :type '(repeat symbol)
+  :group 'equake)
+
+
+
 (defun equake--launch-shell (launchshell)
-  "Launch a new shell session, LAUNCHSHELL will set non-default shell."
+  "Launch a new shell session.
+LAUNCHSHELL selects the non-default shell."
   (interactive)
-  (let ((sh-command equake-default-sh-command)
-        (success t))
-    (when (equal sh-command "")
-      (setq sh-command shell-file-name))
-    (cond ((equal launchshell 'eshell)
-           (eshell 'N))
-          ((equal launchshell 'vterm)
-           (if (require 'vterm nil 'noerror)
+  (let ((sh-command (if (equal equake-default-sh-command "")
+                        shell-file-name
+                      equake-default-sh-command))
+        (success t)
+        buffer)
+    (setq buffer
+          (pcase launchshell
+            ('eshell
+             (eshell 'N)
+             (current-buffer))
+            ('vterm
+             (when (require 'vterm nil t)
                (vterm)
-             (setq success nil)))
-          ((equal launchshell 'rash)
-           (if (not equake-rash-installed)
-               (setq success nil)
-               (if (require 'vterm nil 'noerror)
-                   (vterm)
-                 (shell)
-                 (delete-other-windows))
-               (equake-rash-mode)))
-          ((equal launchshell 'ghostel)
-           (if (require 'ghostel nil 'noerror)
-               (ghostel t)
-             (setq success nil)))
-          ((equal launchshell 'eat)
-           (if (require 'eat nil 'noerror)
+               (current-buffer)))
+            ('ghostel
+             (when (require 'ghostel nil t)
+               (ghostel t)))
+            ('eat
+             (when (require 'eat nil t)
                (let ((buf (eat nil '(4))))
-                 (switch-to-buffer buf)
-                 (set-buffer buf))
-             (setq success nil)))
-          ((equal launchshell 'ansi-term)
-           (ansi-term sh-command))
-          ((equal launchshell 'term)
-           (term sh-command))
-          ((equal launchshell 'shell)
-           (shell)
-           (delete-other-windows)
-           (if equake-shell-mode-setup
-               (comint-send-string nil equake-shell-mode-setup)))
-          (t (setq success nil)))
+                 (when (buffer-live-p buf)
+                   (switch-to-buffer buf)
+                   (set-buffer buf)
+                   buf))))
+            ((or 'rash 'nshell 'hilbish)
+             (let* ((spec (assq launchshell equake-external-shells))
+                    (program (plist-get (cdr spec) :program))
+                    (args (plist-get (cdr spec) :args))
+                    (mode (plist-get (cdr spec) :mode))
+                    (executable (and program (executable-find program))))
+               (when executable
+                 (let ((buf (equake--launch-shell-with-fallback
+                             executable args)))
+                   (when (buffer-live-p buf)
+                     (when mode
+                       (with-current-buffer buf
+                         (funcall mode)))
+                     buf)))))
+            ('ansi-term
+             (ansi-term sh-command))
+            ('term
+             (term sh-command))
+            ('shell
+             (shell)
+             (delete-other-windows)
+             (when equake-shell-mode-setup
+               (comint-send-string nil equake-shell-mode-setup))
+             (current-buffer))
+            (_ nil)))
+    (unless (buffer-live-p buffer)
+      (setq success nil))
     success))
 
 ;;; Orchestration
