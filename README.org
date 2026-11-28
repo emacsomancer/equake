@@ -140,7 +140,7 @@ Or [[https://github.com/slotThe/vc-use-package][vc-use-package]] (probably the l
 ** package-vc
 Or Emacs 30+'s built-in ~package-vc~ instead of vc-use-package:
 #+begin_src elisp
-(use-package org-daily-reflection
+(use-package equake
   :vc (equake :fetcher github :repo "emacsomancer/equake")
   :ensure t
   :config
