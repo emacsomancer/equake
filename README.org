@@ -8,7 +8,9 @@
 
 I wanted to have a Lisp shell and a Lisp console interface to that shell. Of course, =eshell= is already 99% of this, but having a tabbed drop-down console feels useful to me, though it may just be what I'm used to.
 
-Thus the motivation for its creation was to easily swap =eshell= into a workflow habituated to drop-down terminal emulators, but it can be used also with =shell=, =ansi-term=, =term=, [[http://rash-lang.org/][rash]],  [[https://github.com/akermu/emacs-libvterm][vterm]], [[https://codeberg.org/akib/emacs-eat][eat]], and [[https://github.com/dakra/ghostel][ghostel]]. And different tabs can be opened using different shells (i.e. you could have one tab running =eshell=, one running =ansi-term=, and so on and so forth).
+Thus the motivation for its creation was to easily swap =eshell= into a workflow habituated to drop-down terminal emulators, but it can be used also with =shell=, =ansi-term=, =term=,  [[https://github.com/akermu/emacs-libvterm][vterm]], [[https://codeberg.org/akib/emacs-eat][eat]], and [[https://github.com/dakra/ghostel][ghostel]]. Also, special shells (actually any shells, but I've set it up to handle a few unusual ones) can be launched in a parallel fashion. Shells with experimental support for this are currently:  [[http://rash-lang.org/][rash]], [[https://hilbish.sammyette.party][hilbish]], [[https://github.com/nerima-lisp/nshell][nshell]].
+
+And different tabs can be opened using different shells (i.e. you could have one tab running =eshell=, one running =ansi-term=, and so on and so forth).
 
 =eshell= obviously has its own set of features/advantages (see e.g., [[https://www.howardism.org/Technical/Emacs/eshell-why.html]["Why Use Eshell"]] ) and additionally so when used with =eat=, but for other possible terminals at this point I would most highly recommend =ghostel=: it's far fastest than any other terminal/shell on Emacs, and the Emacs integration and tooling around it is excellent.
 
@@ -381,6 +383,8 @@ You can also customise faces, e.g. via:
 #+end_src
 
 * Changelog
+** v0.9999111
+Generalise some methods for launching shells. Tweak colour theme. Add ~nshell~ and ~hilbish~.
 ** v0.999111
 Enables use of =ghostel= and =eat=.
 ** v0.9911
